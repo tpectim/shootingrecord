@@ -156,7 +156,7 @@ body { margin: 0; background-color: #111; overflow: hidden; font-family: -apple-
     <div id="chart-overlay">
         <div class="chart-container">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2 style="margin: 0; color: #ffd700;">📊 成績分析</h2>
+                <h2 style="margin: 0; color: #ffd700;">📊 成績分析 (已排除未擊發)</h2>
                 <button id="btn-close-charts" style="background: #f44336; border: none; color: white; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">關閉</button>
             </div>
             
@@ -757,9 +757,9 @@ const targetLinePlugin = {
             
             ctx.save();
             ctx.beginPath();
-            ctx.setLineDash([5, 5]); // 虛線樣式
+            ctx.setLineDash([5, 5]); 
             ctx.lineWidth = 2;
-            ctx.strokeStyle = 'rgba(255, 235, 59, 0.9)'; // 黃色
+            ctx.strokeStyle = 'rgba(255, 235, 59, 0.8)'; // 黃色
             ctx.moveTo(xAxis.left, yPixel);
             ctx.lineTo(xAxis.right, yPixel);
             ctx.stroke();
@@ -768,34 +768,33 @@ const targetLinePlugin = {
     }
 };
 
-// 外掛：在長條圖頂部畫出分數 (過濾未擊發)
-const barScoreLabelPlugin = {
-    id: 'barScoreLabelPlugin',
+// 外掛：在資料點頂部畫出分數 (同時適用於長條圖與折線圖)
+const scoreLabelPlugin = {
+    id: 'scoreLabelPlugin',
     afterDatasetsDraw: (chart) => {
-        if (chart.config.options.plugins.barScoreLabelPlugin && chart.config.options.plugins.barScoreLabelPlugin.scores) {
+        if (chart.config.options.plugins.scoreLabelPlugin && chart.config.options.plugins.scoreLabelPlugin.scores) {
             const ctx = chart.ctx;
-            const scores = chart.config.options.plugins.barScoreLabelPlugin.scores;
+            const scores = chart.config.options.plugins.scoreLabelPlugin.scores;
             
             chart.data.datasets.forEach((dataset, i) => {
                 const meta = chart.getDatasetMeta(i);
-                meta.data.forEach((bar, index) => {
+                meta.data.forEach((element, index) => {
                     const score = scores[index];
-                    if (score > 0) { // 大於 0 才標示 (排除未擊發)
-                        ctx.save();
-                        ctx.fillStyle = '#fff';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'bottom';
-                        ctx.font = 'bold 12px Arial';
-                        ctx.fillText(Math.floor(score), bar.x, bar.y - 2);
-                        ctx.restore();
-                    }
+                    ctx.save();
+                    ctx.fillStyle = '#fff';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.font = 'bold 12px Arial';
+                    // 顯示整數分數，Y軸往上偏移 6px 避免擋到折線圖的點
+                    ctx.fillText(Math.floor(score), element.x, element.y - 6);
+                    ctx.restore();
                 });
             });
         }
     }
 };
 
-Chart.register(targetLinePlugin, barScoreLabelPlugin);
+Chart.register(targetLinePlugin, scoreLabelPlugin);
 
 
 // --- 圖表繪製與管理邏輯 ---
@@ -808,17 +807,20 @@ Chart.defaults.color = '#bbb';
 Chart.defaults.borderColor = 'rgba(255,255,255,0.1)';
 
 document.getElementById('btn-show-charts').addEventListener('click', () => {
-    if (shotHistory.length === 0) {
-        alert("目前尚無成績紀錄可供分析。");
+    // 過濾掉未擊發的紀錄
+    const validShots = shotHistory.filter(s => !s.isMisfire);
+    
+    if (validShots.length === 0) {
+        alert("目前尚無有效成績紀錄可供分析。");
         return;
     }
 
     document.getElementById('chart-overlay').style.display = 'flex';
 
-    // 整理 X 軸標籤與數據
-    const labels = shotHistory.map((shot, i) => shot.isMisfire ? `未擊發` : `第 ${i + 1} 發`);
-    const scores = shotHistory.map(s => s.isMisfire ? 0 : s.score);
-    const times = shotHistory.map(s => parseFloat(s.time) || 0);
+    // 整理純有效發數的標籤與數據
+    const labels = validShots.map((shot, i) => `第 ${i + 1} 發`);
+    const scores = validShots.map(s => s.score);
+    const times = validShots.map(s => parseFloat(s.time) || 0);
 
     // 1. 單發分數 (長條圖)
     const ctxScore = document.getElementById('scoreChartCanvas').getContext('2d');
@@ -831,8 +833,8 @@ document.getElementById('btn-show-charts').addEventListener('click', () => {
             datasets: [{
                 label: '單發分數',
                 data: scores,
-                backgroundColor: scores.map(s => s === 0 ? '#607d8b' : 'rgba(255, 215, 0, 0.7)'),
-                borderColor: scores.map(s => s === 0 ? '#455a64' : '#ffd700'),
+                backgroundColor: 'rgba(255, 215, 0, 0.7)',
+                borderColor: '#ffd700',
                 borderWidth: 1
             }]
         },
@@ -842,7 +844,7 @@ document.getElementById('btn-show-charts').addEventListener('click', () => {
                 y: {
                     beginAtZero: true,
                     max: 10.9,
-                    ticks: { stepSize: 1 } // 每一刻度固定為 1
+                    ticks: { stepSize: 1 } 
                 }
             },
             plugins: {
@@ -876,7 +878,7 @@ document.getElementById('btn-show-charts').addEventListener('click', () => {
             },
             plugins: {
                 legend: { display: false },
-                barScoreLabelPlugin: { scores: scores } // 開啟頂部分數顯示
+                scoreLabelPlugin: { scores: scores } // 開啟頂部分數顯示
             }
         }
     });
@@ -895,7 +897,7 @@ document.getElementById('btn-show-charts').addEventListener('click', () => {
                 backgroundColor: 'rgba(255, 215, 0, 0.2)',
                 borderColor: '#ffd700',
                 borderWidth: 2,
-                pointBackgroundColor: scores.map(s => s === 0 ? '#607d8b' : '#ffd700'),
+                pointBackgroundColor: '#ffd700',
                 pointRadius: 4,
                 fill: false,
                 tension: 0.1
@@ -943,7 +945,8 @@ document.getElementById('btn-show-charts').addEventListener('click', () => {
                 y: { beginAtZero: true, title: { display: true, text: '秒 (s)' } }
             },
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                scoreLabelPlugin: { scores: scores } // 開啟頂部分數顯示 (折線圖適用)
             }
         }
     });
