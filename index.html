@@ -487,6 +487,80 @@
                 document.querySelectorAll('.thumb-img').forEach(img => img.addEventListener('click', function() { document.getElementById('modalImage').src = this.src; document.getElementById('imageModal').style.display = "flex"; }));
                 document.querySelectorAll('.btn-danger-small').forEach(btn => btn.addEventListener('click', async function() { if(confirm("確定要刪除這筆訓練紀錄嗎？")) { await deleteDoc(doc(db, "shooting_records", this.getAttribute('data-id'))); loadHistory(); } }));
 
+                // ================== 新增編輯功能 ==================
+                // 1. 編輯射手
+                document.querySelectorAll('.btn-edit-shooter').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const id = this.getAttribute('data-id');
+                        const span = document.getElementById(`shooter-${id}`);
+                        const currentVal = span.innerText;
+                        const newVal = prompt('✏️ 請輸入新的「射手姓名」：', currentVal);
+                        
+                        if (newVal !== null && newVal.trim() !== '' && newVal !== currentVal) {
+                            try {
+                                span.innerText = '更新中...';
+                                await updateDoc(doc(db, "shooting_records", id), { shooterName: newVal.trim() });
+                                span.innerHTML = `<strong>${newVal.trim()}</strong>`;
+                                
+                                const recordIndex = globalHistoryData.findIndex(item => item.id === id);
+                                if (recordIndex > -1) globalHistoryData[recordIndex].shooterName = newVal.trim();
+                            } catch (error) {
+                                alert("❌ 更新失敗：" + error.message);
+                                span.innerHTML = `<strong>${currentVal}</strong>`;
+                            }
+                        }
+                    });
+                });
+
+                // 2. 編輯項目
+                document.querySelectorAll('.btn-edit-content').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const id = this.getAttribute('data-id');
+                        const span = document.getElementById(`content-${id}`);
+                        const currentVal = span.innerText;
+                        const newVal = prompt('✏️ 請輸入新的「射擊項目」：', currentVal);
+                        
+                        if (newVal !== null && newVal !== currentVal) {
+                            try {
+                                span.innerText = '更新中...';
+                                await updateDoc(doc(db, "shooting_records", id), { content: newVal.trim() });
+                                span.innerText = newVal.trim();
+                                
+                                const recordIndex = globalHistoryData.findIndex(item => item.id === id);
+                                if (recordIndex > -1) globalHistoryData[recordIndex].content = newVal.trim();
+                            } catch (error) {
+                                alert("❌ 更新失敗：" + error.message);
+                                span.innerText = currentVal;
+                            }
+                        }
+                    });
+                });
+
+                // 3. 編輯備註
+                document.querySelectorAll('.btn-edit-note').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const id = this.getAttribute('data-id');
+                        const span = document.getElementById(`note-${id}`);
+                        const currentVal = span.innerText;
+                        const newVal = prompt('✏️ 請輸入新的「備註檢討」：', currentVal);
+                        
+                        if (newVal !== null && newVal !== currentVal) {
+                            try {
+                                span.innerText = '更新中...';
+                                await updateDoc(doc(db, "shooting_records", id), { note: newVal.trim() });
+                                span.innerText = newVal.trim();
+                                
+                                const recordIndex = globalHistoryData.findIndex(item => item.id === id);
+                                if (recordIndex > -1) globalHistoryData[recordIndex].note = newVal.trim();
+                            } catch (error) {
+                                alert("❌ 更新失敗：" + error.message);
+                                span.innerText = currentVal;
+                            }
+                        }
+                    });
+                });
+                // ==================================================
+
             } catch (error) { status.innerText = "狀態：❌ 載入失敗。"; console.error(error); }
         }
 
